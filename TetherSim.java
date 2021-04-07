@@ -1,5 +1,15 @@
 
 import java.awt.Dimension;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+
+import java.awt.image.BufferedImage;;
+
+import javax.imageio.ImageIO;
+
+import java.io.File;
+import java.io.IOException;
+
 import javax.swing.JComponent;
 import javax.swing.JFrame;
 
@@ -8,6 +18,8 @@ public class TetherSim {
     static private final int VIEW_WIDTH = 2000;
     static private final int VIEW_HEIGHT = 2000;
 
+    static private final File BACKGROUND_IMAGE_FILE = new File("space_background.jpg");
+
     public static void main(String[] args) {
         new TetherSim().run();
     }
@@ -15,7 +27,15 @@ public class TetherSim {
     private void run() {
         JFrame frame = new JFrame("TetherSim");
 
-        JComponent canvas = new SimCanvas();
+        BufferedImage backgroundImage = null;
+        try {
+            backgroundImage = ImageIO.read(BACKGROUND_IMAGE_FILE);
+        } catch (IOException exc) {
+            System.err.println("error loading image " + BACKGROUND_IMAGE_FILE + ": " + exc.getMessage());
+            System.exit(1);
+        }
+
+        JComponent canvas = new SimCanvas(backgroundImage);
         canvas.setPreferredSize(new Dimension(VIEW_WIDTH, VIEW_HEIGHT));
         frame.add(canvas);
 
@@ -27,4 +47,17 @@ public class TetherSim {
 }
 
 class SimCanvas extends JComponent {
+
+    private BufferedImage backgroundImage;
+
+    public SimCanvas(BufferedImage backgroundImage) {
+        this.backgroundImage = backgroundImage;
+    }
+
+    protected void paintComponent(Graphics legacyG) {
+        Graphics2D g = (Graphics2D) legacyG;
+
+        g.drawImage(backgroundImage, null, 0, 0);
+    }
+
 }
