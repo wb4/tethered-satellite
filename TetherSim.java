@@ -1,10 +1,7 @@
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.geom.AffineTransform;
-import java.awt.image.AffineTransformOp;
 import java.awt.image.BufferedImage;
-import java.awt.image.BufferedImageOp;
 import java.io.File;
 import java.io.IOException;
 import javax.imageio.ImageIO;
@@ -58,14 +55,9 @@ class SimCanvas extends JComponent {
   }
 
   private void drawBackground(Graphics2D g) {
-    AffineTransform transform = new AffineTransform();
-    transform.translate(
-        (getWidth() - backgroundImage.getWidth()) / 2,
-        (getHeight() - backgroundImage.getHeight()) / 2);
+    int xOff = (getWidth() - backgroundImage.getWidth()) / 2;
+    int yOff = (getHeight() - backgroundImage.getHeight()) / 2;
 
-    BufferedImageOp imageOp =
-        new AffineTransformOp(transform, AffineTransformOp.TYPE_NEAREST_NEIGHBOR);
-
-    g.drawImage(backgroundImage, imageOp, 0, 0);
+    g.drawImage(backgroundImage, null, xOff, yOff);
   }
 }
