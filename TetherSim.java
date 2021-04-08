@@ -24,24 +24,33 @@ public class TetherSim {
   private static final File EARTH_IMAGE_FILE = new File("earth.png");
   private static final File MAIN_SATELLITE_IMAGE_FILE = new File("satellite_main.png");
 
+  private static final double FPS_DESIRED = 60.0;
+
+  private JComponent simCanvas;
+  private PhysicsObject satellite;
+
   public static void main(String[] args) {
-    new TetherSim().run();
+    new TetherSim().start();
   }
 
-  private void run() {
+  public TetherSim() {
     JFrame frame = new JFrame("TetherSim");
 
     BufferedImage backgroundImage = loadImageOrDie(BACKGROUND_IMAGE_FILE);
     BufferedImage earthImage = loadImageOrDie(EARTH_IMAGE_FILE);
     BufferedImage mainSatelliteImage = loadImageOrDie(MAIN_SATELLITE_IMAGE_FILE);
 
-    PhysicsObject satellite =
-        new PhysicsObject(new Vec2D(0.0, 2.0 * EARTH_RADIUS), SATELLITE_RADIUS, mainSatelliteImage);
+    this.satellite =
+        new PhysicsObject(
+            new Vec2D(0.0, 2.0 * EARTH_RADIUS),
+            new Vec2D(500, 0),
+            SATELLITE_RADIUS,
+            mainSatelliteImage);
 
-    JComponent canvas =
+    this.simCanvas =
         new SimCanvas(backgroundImage, earthImage, SPACE_VIEW_WIDTH, EARTH_RADIUS, satellite);
-    canvas.setPreferredSize(new Dimension(VIEW_WIDTH, VIEW_HEIGHT));
-    frame.add(canvas);
+    simCanvas.setPreferredSize(new Dimension(VIEW_WIDTH, VIEW_HEIGHT));
+    frame.add(simCanvas);
 
     frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     frame.pack();
@@ -58,6 +67,38 @@ public class TetherSim {
     }
 
     return image;
+  }
+
+  public void start() {
+    new Thread(() -> run(), "Physics Simulator").start();
+  }
+
+  private void run() {
+    final long targetMillisPerFrame = (long) (1000.0 / FPS_DESIRED);
+
+    long lastTickTimeMillis = System.currentTimeMillis();
+
+    for (; ; ) {
+      long startTimeMillis = System.currentTimeMillis();
+
+      double tickSecs = (startTimeMillis - lastTickTimeMillis) / 1000.0;
+      tickPhysics(tickSecs);
+      simCanvas.repaint();
+      lastTickTimeMillis = startTimeMillis;
+
+      long elapsedTimeMillis = System.currentTimeMillis() - startTimeMillis;
+      long sleepTimeMillis = targetMillisPerFrame - elapsedTimeMillis;
+      if (sleepTimeMillis > 0) {
+        try {
+          Thread.sleep(sleepTimeMillis);
+        } catch (InterruptedException exc) {
+        }
+      }
+    }
+  }
+
+  private void tickPhysics(double secs) {
+    satellite.move(secs);
   }
 }
 
@@ -129,11 +170,13 @@ class SimCanvas extends JComponent {
 
 class PhysicsObject {
   private Vec2D position;
+  private Vec2D velocity;
   private double radius;
   private BufferedImage image;
 
-  public PhysicsObject(Vec2D position, double radius, BufferedImage image) {
+  public PhysicsObject(Vec2D position, Vec2D velocity, double radius, BufferedImage image) {
     this.position = position;
+    this.velocity = velocity;
     this.radius = radius;
     this.image = image;
   }
@@ -148,6 +191,10 @@ class PhysicsObject {
 
   public BufferedImage image() {
     return image;
+  }
+
+  public void move(double secs) {
+    position = position.add(velocity.scale(secs));
   }
 }
 
@@ -166,5 +213,13 @@ class Vec2D {
 
   public double y() {
     return y;
+  }
+
+  public Vec2D add(Vec2D other) {
+    return new Vec2D(x + other.x, y + other.y);
+  }
+
+  public Vec2D scale(double s) {
+    return new Vec2D(s * x, s * y);
   }
 }
