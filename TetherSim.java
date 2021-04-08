@@ -16,11 +16,13 @@ public class TetherSim {
   private static final int VIEW_WIDTH = 2000;
   private static final int VIEW_HEIGHT = 2000;
 
-  private static final double SPACE_VIEW_WIDTH = 20000.0;
-  private static final double EARTH_DIAMETER = 12742.0;
+  private static final double SPACE_VIEW_WIDTH = 40000.0;
+  private static final double EARTH_RADIUS = 12742.0 / 2.0;
+  private static final double SATELLITE_RADIUS = 600.0;
 
   private static final File BACKGROUND_IMAGE_FILE = new File("space_background.jpg");
   private static final File EARTH_IMAGE_FILE = new File("earth.png");
+  private static final File MAIN_SATELLITE_IMAGE_FILE = new File("satellite_main.png");
 
   public static void main(String[] args) {
     new TetherSim().run();
@@ -31,9 +33,13 @@ public class TetherSim {
 
     BufferedImage backgroundImage = loadImageOrDie(BACKGROUND_IMAGE_FILE);
     BufferedImage earthImage = loadImageOrDie(EARTH_IMAGE_FILE);
+    BufferedImage mainSatelliteImage = loadImageOrDie(MAIN_SATELLITE_IMAGE_FILE);
+
+    PhysicsObject satellite =
+        new PhysicsObject(new Vec2D(0.0, 2.0 * EARTH_RADIUS), SATELLITE_RADIUS, mainSatelliteImage);
 
     JComponent canvas =
-        new SimCanvas(backgroundImage, earthImage, SPACE_VIEW_WIDTH, EARTH_DIAMETER);
+        new SimCanvas(backgroundImage, earthImage, SPACE_VIEW_WIDTH, EARTH_RADIUS, satellite);
     canvas.setPreferredSize(new Dimension(VIEW_WIDTH, VIEW_HEIGHT));
     frame.add(canvas);
 
@@ -61,18 +67,23 @@ class SimCanvas extends JComponent {
   private BufferedImage earthImage;
 
   private double spaceViewWidth;
-  private double earthDiameter;
+  private double earthRadius;
+
+  private PhysicsObject satellite;
 
   public SimCanvas(
       BufferedImage backgroundImage,
       BufferedImage earthImage,
       double spaceViewWidth,
-      double earthDiameter) {
+      double earthRadius,
+      PhysicsObject satellite) {
     this.backgroundImage = backgroundImage;
     this.earthImage = earthImage;
 
     this.spaceViewWidth = spaceViewWidth;
-    this.earthDiameter = earthDiameter;
+    this.earthRadius = earthRadius;
+
+    this.satellite = satellite;
   }
 
   protected void paintComponent(Graphics legacyG) {
@@ -80,6 +91,7 @@ class SimCanvas extends JComponent {
 
     drawBackground(g);
     drawEarth(g);
+    drawSatellite(g);
   }
 
   private void drawBackground(Graphics2D g) {
@@ -90,6 +102,14 @@ class SimCanvas extends JComponent {
   }
 
   private void drawEarth(Graphics2D g) {
+    drawImageInWorld(g, earthImage, new Vec2D(0, 0), earthRadius);
+  }
+
+  private void drawSatellite(Graphics2D g) {
+    drawImageInWorld(g, satellite.image(), satellite.position(), satellite.radius());
+  }
+
+  private void drawImageInWorld(Graphics2D g, BufferedImage image, Vec2D position, double radius) {
     AffineTransform transform = new AffineTransform();
 
     transform.translate(getWidth() / 2, getHeight() / 2);
@@ -97,12 +117,54 @@ class SimCanvas extends JComponent {
     double viewScale = Math.min(getWidth(), getHeight()) / spaceViewWidth;
     transform.scale(viewScale, viewScale);
 
-    transform.scale(earthDiameter / earthImage.getWidth(), earthDiameter / earthImage.getHeight());
-    transform.translate(-earthImage.getWidth() / 2, -earthImage.getHeight() / 2);
+    transform.translate(position.x(), -position.y());
+    transform.scale(2.0 * radius / image.getWidth(), 2.0 * radius / image.getHeight());
+    transform.translate(-image.getWidth() / 2, -image.getHeight() / 2);
 
-    BufferedImageOp imageOp =
-        new AffineTransformOp(transform, AffineTransformOp.TYPE_NEAREST_NEIGHBOR);
+    BufferedImageOp imageOp = new AffineTransformOp(transform, AffineTransformOp.TYPE_BICUBIC);
 
-    g.drawImage(earthImage, imageOp, 0, 0);
+    g.drawImage(image, imageOp, 0, 0);
+  }
+}
+
+class PhysicsObject {
+  private Vec2D position;
+  private double radius;
+  private BufferedImage image;
+
+  public PhysicsObject(Vec2D position, double radius, BufferedImage image) {
+    this.position = position;
+    this.radius = radius;
+    this.image = image;
+  }
+
+  public Vec2D position() {
+    return position;
+  }
+
+  public double radius() {
+    return radius;
+  }
+
+  public BufferedImage image() {
+    return image;
+  }
+}
+
+class Vec2D {
+  private double x;
+  private double y;
+
+  public Vec2D(double x, double y) {
+    this.x = x;
+    this.y = y;
+  }
+
+  public double x() {
+    return x;
+  }
+
+  public double y() {
+    return y;
   }
 }
