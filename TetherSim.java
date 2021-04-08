@@ -17,8 +17,12 @@ public class TetherSim {
   private static final int VIEW_HEIGHT = 2000;
 
   private static final double SPACE_VIEW_WIDTH = 40000.0;
+
   private static final double EARTH_RADIUS = 12742.0 / 2.0;
+  private static final double EARTH_MASS = 100000000000.0;
+
   private static final double SATELLITE_RADIUS = 600.0;
+  private static final double SATELLITE_MASS = 100.0;
 
   private static final File BACKGROUND_IMAGE_FILE = new File("space_background.jpg");
   private static final File EARTH_IMAGE_FILE = new File("earth.png");
@@ -43,7 +47,8 @@ public class TetherSim {
     this.satellite =
         new PhysicsObject(
             new Vec2D(0.0, 2.0 * EARTH_RADIUS),
-            new Vec2D(500, 0),
+            new Vec2D(-2800, 0),
+            SATELLITE_MASS,
             SATELLITE_RADIUS,
             mainSatelliteImage);
 
@@ -82,7 +87,9 @@ public class TetherSim {
       long startTimeMillis = System.currentTimeMillis();
 
       double tickSecs = (startTimeMillis - lastTickTimeMillis) / 1000.0;
+
       tickPhysics(tickSecs);
+
       simCanvas.repaint();
       lastTickTimeMillis = startTimeMillis;
 
@@ -98,6 +105,7 @@ public class TetherSim {
   }
 
   private void tickPhysics(double secs) {
+    satellite.feelGravity(new Vec2D(0, 0), EARTH_MASS, secs);
     satellite.move(secs);
   }
 }
@@ -171,12 +179,15 @@ class SimCanvas extends JComponent {
 class PhysicsObject {
   private Vec2D position;
   private Vec2D velocity;
+  private double mass;
   private double radius;
   private BufferedImage image;
 
-  public PhysicsObject(Vec2D position, Vec2D velocity, double radius, BufferedImage image) {
+  public PhysicsObject(
+      Vec2D position, Vec2D velocity, double mass, double radius, BufferedImage image) {
     this.position = position;
     this.velocity = velocity;
+    this.mass = mass;
     this.radius = radius;
     this.image = image;
   }
@@ -195,6 +206,22 @@ class PhysicsObject {
 
   public void move(double secs) {
     position = position.add(velocity.scale(secs));
+  }
+
+  public void feelGravity(Vec2D otherPosition, double otherMass, double secs) {
+    Vec2D offset = otherPosition.sub(position);
+    Vec2D normalizedDirection = offset.normalized();
+    double forceMagnitude = mass * otherMass / offset.lengthSquared();
+
+    feelForce(normalizedDirection.scale(forceMagnitude), secs);
+  }
+
+  public void feelForce(Vec2D force, double secs) {
+    feelImpulse(force.scale(secs));
+  }
+
+  public void feelImpulse(Vec2D impulse) {
+    velocity = velocity.add(impulse.scale(1.0 / mass));
   }
 }
 
@@ -219,7 +246,27 @@ class Vec2D {
     return new Vec2D(x + other.x, y + other.y);
   }
 
+  public Vec2D sub(Vec2D other) {
+    return new Vec2D(x - other.x, y - other.y);
+  }
+
   public Vec2D scale(double s) {
     return new Vec2D(s * x, s * y);
+  }
+
+  public Vec2D normalized() {
+    return scale(1.0 / length());
+  }
+
+  public double length() {
+    return Math.sqrt(lengthSquared());
+  }
+
+  public double lengthSquared() {
+    return x * x + y * y;
+  }
+
+  public String toString() {
+    return "Vec2D { " + x + ", " + y + " }";
   }
 }
