@@ -16,7 +16,7 @@ public class TetherSim {
   private static final int VIEW_WIDTH = 2000;
   private static final int VIEW_HEIGHT = 2000;
 
-  private static final double WORLD_VIEW_WIDTH = 20000.0;
+  private static final double SPACE_VIEW_WIDTH = 20000.0;
   private static final double EARTH_DIAMETER = 12742.0;
 
   private static final File BACKGROUND_IMAGE_FILE = new File("space_background.jpg");
@@ -33,7 +33,7 @@ public class TetherSim {
     BufferedImage earthImage = loadImageOrDie(EARTH_IMAGE_FILE);
 
     JComponent canvas =
-        new SimCanvas(backgroundImage, earthImage, WORLD_VIEW_WIDTH, EARTH_DIAMETER);
+        new SimCanvas(backgroundImage, earthImage, SPACE_VIEW_WIDTH, EARTH_DIAMETER);
     canvas.setPreferredSize(new Dimension(VIEW_WIDTH, VIEW_HEIGHT));
     frame.add(canvas);
 
@@ -60,18 +60,18 @@ class SimCanvas extends JComponent {
   private BufferedImage backgroundImage;
   private BufferedImage earthImage;
 
-  private double worldViewWidth;
+  private double spaceViewWidth;
   private double earthDiameter;
 
   public SimCanvas(
       BufferedImage backgroundImage,
       BufferedImage earthImage,
-      double worldViewWidth,
+      double spaceViewWidth,
       double earthDiameter) {
     this.backgroundImage = backgroundImage;
     this.earthImage = earthImage;
 
-    this.worldViewWidth = worldViewWidth;
+    this.spaceViewWidth = spaceViewWidth;
     this.earthDiameter = earthDiameter;
   }
 
@@ -94,7 +94,7 @@ class SimCanvas extends JComponent {
 
     transform.translate(getWidth() / 2, getHeight() / 2);
 
-    double viewScale = Math.min(getWidth(), getHeight()) / worldViewWidth;
+    double viewScale = Math.min(getWidth(), getHeight()) / spaceViewWidth;
     transform.scale(viewScale, viewScale);
 
     transform.scale(earthDiameter / earthImage.getWidth(), earthDiameter / earthImage.getHeight());
