@@ -33,6 +33,8 @@ public class TetherSim {
   private JComponent simCanvas;
   private PhysicsObject satellite;
 
+  private Object physicsLock = new Object();
+
   public static void main(String[] args) {
     new TetherSim().start();
   }
@@ -53,7 +55,8 @@ public class TetherSim {
             mainSatelliteImage);
 
     this.simCanvas =
-        new SimCanvas(backgroundImage, earthImage, SPACE_VIEW_WIDTH, EARTH_RADIUS, satellite);
+        new SimCanvas(
+            backgroundImage, earthImage, SPACE_VIEW_WIDTH, EARTH_RADIUS, satellite, physicsLock);
     simCanvas.setPreferredSize(new Dimension(VIEW_WIDTH, VIEW_HEIGHT));
     frame.add(simCanvas);
 
@@ -88,7 +91,9 @@ public class TetherSim {
 
       double tickSecs = (startTimeMillis - lastTickTimeMillis) / 1000.0;
 
-      tickPhysics(tickSecs);
+      synchronized (physicsLock) {
+        tickPhysics(tickSecs);
+      }
 
       simCanvas.repaint();
       lastTickTimeMillis = startTimeMillis;
@@ -120,12 +125,15 @@ class SimCanvas extends JComponent {
 
   private PhysicsObject satellite;
 
+  private Object physicsLock;
+
   public SimCanvas(
       BufferedImage backgroundImage,
       BufferedImage earthImage,
       double spaceViewWidth,
       double earthRadius,
-      PhysicsObject satellite) {
+      PhysicsObject satellite,
+      Object physicsLock) {
     this.backgroundImage = backgroundImage;
     this.earthImage = earthImage;
 
@@ -133,6 +141,8 @@ class SimCanvas extends JComponent {
     this.earthRadius = earthRadius;
 
     this.satellite = satellite;
+
+    this.physicsLock = physicsLock;
   }
 
   protected void paintComponent(Graphics legacyG) {
@@ -140,7 +150,10 @@ class SimCanvas extends JComponent {
 
     drawBackground(g);
     drawEarth(g);
-    drawSatellite(g);
+
+    synchronized (physicsLock) {
+      drawSatellite(g);
+    }
   }
 
   private void drawBackground(Graphics2D g) {
