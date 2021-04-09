@@ -7,6 +7,8 @@ import java.awt.image.BufferedImage;
 import java.awt.image.BufferedImageOp;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import javax.imageio.ImageIO;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
@@ -31,7 +33,9 @@ public class TetherSim {
   private static final double FPS_DESIRED = 60.0;
 
   private JComponent simCanvas;
-  private PhysicsObject satellite;
+  private List<PhysicsObject> physicsObjects;
+  ;
+  private GravitySource earthGravity;
 
   private Object physicsLock = new Object();
 
@@ -46,7 +50,7 @@ public class TetherSim {
     BufferedImage earthImage = loadImageOrDie(EARTH_IMAGE_FILE);
     BufferedImage mainSatelliteImage = loadImageOrDie(MAIN_SATELLITE_IMAGE_FILE);
 
-    this.satellite =
+    PhysicsObject satellite =
         new PhysicsObject(
             new Vec2D(0.0, 2.0 * EARTH_RADIUS),
             new Vec2D(-2800, 0),
@@ -54,9 +58,17 @@ public class TetherSim {
             SATELLITE_RADIUS,
             mainSatelliteImage);
 
-    this.simCanvas =
-        new SimCanvas(
-            backgroundImage, earthImage, SPACE_VIEW_WIDTH, EARTH_RADIUS, satellite, physicsLock);
+    PhysicsObject earth =
+        new PhysicsObject(
+            new Vec2D(0.0, 0.0), new Vec2D(0.0, 0.0), EARTH_MASS, EARTH_RADIUS, earthImage);
+
+    this.physicsObjects = new ArrayList<>();
+    physicsObjects.add(satellite);
+    physicsObjects.add(earth);
+
+    this.earthGravity = new GravitySource(earth);
+
+    this.simCanvas = new SimCanvas(SPACE_VIEW_WIDTH, backgroundImage, physicsObjects, physicsLock);
     simCanvas.setPreferredSize(new Dimension(VIEW_WIDTH, VIEW_HEIGHT));
     frame.add(simCanvas);
 
@@ -110,37 +122,35 @@ public class TetherSim {
   }
 
   private void tickPhysics(double secs) {
-    satellite.feelGravity(new Vec2D(0, 0), EARTH_MASS, secs);
-    satellite.move(secs);
+    for (PhysicsObject po : physicsObjects) {
+      po.feelGravity(earthGravity, secs);
+    }
+    for (PhysicsObject po : physicsObjects) {
+      po.move(secs);
+    }
   }
 }
 
 class SimCanvas extends JComponent {
 
-  private BufferedImage backgroundImage;
-  private BufferedImage earthImage;
-
   private double spaceViewWidth;
-  private double earthRadius;
 
-  private PhysicsObject satellite;
+  private BufferedImage backgroundImage;
+
+  private List<PhysicsObject> physicsObjects;
+  ;
 
   private Object physicsLock;
 
   public SimCanvas(
-      BufferedImage backgroundImage,
-      BufferedImage earthImage,
       double spaceViewWidth,
-      double earthRadius,
-      PhysicsObject satellite,
+      BufferedImage backgroundImage,
+      List<PhysicsObject> physicsObjects,
       Object physicsLock) {
-    this.backgroundImage = backgroundImage;
-    this.earthImage = earthImage;
-
     this.spaceViewWidth = spaceViewWidth;
-    this.earthRadius = earthRadius;
+    this.backgroundImage = backgroundImage;
 
-    this.satellite = satellite;
+    this.physicsObjects = physicsObjects;
 
     this.physicsLock = physicsLock;
   }
@@ -149,10 +159,9 @@ class SimCanvas extends JComponent {
     Graphics2D g = (Graphics2D) legacyG;
 
     drawBackground(g);
-    drawEarth(g);
 
     synchronized (physicsLock) {
-      drawSatellite(g);
+      drawPhysicsObjects(g);
     }
   }
 
@@ -163,12 +172,10 @@ class SimCanvas extends JComponent {
     g.drawImage(backgroundImage, null, xOff, yOff);
   }
 
-  private void drawEarth(Graphics2D g) {
-    drawImageInWorld(g, earthImage, new Vec2D(0, 0), earthRadius);
-  }
-
-  private void drawSatellite(Graphics2D g) {
-    drawImageInWorld(g, satellite.image(), satellite.position(), satellite.radius());
+  private void drawPhysicsObjects(Graphics2D g) {
+    for (PhysicsObject po : physicsObjects) {
+      drawImageInWorld(g, po.image(), po.position(), po.radius());
+    }
   }
 
   private void drawImageInWorld(Graphics2D g, BufferedImage image, Vec2D position, double radius) {
@@ -209,6 +216,10 @@ class PhysicsObject {
     return position;
   }
 
+  public double mass() {
+    return mass;
+  }
+
   public double radius() {
     return radius;
   }
@@ -221,12 +232,20 @@ class PhysicsObject {
     position = position.add(velocity.scale(secs));
   }
 
-  public void feelGravity(Vec2D otherPosition, double otherMass, double secs) {
-    Vec2D offset = otherPosition.sub(position);
-    Vec2D normalizedDirection = offset.normalized();
-    double forceMagnitude = mass * otherMass / offset.lengthSquared();
+  public void feelGravity(GravitySource source, double secs) {
+    PhysicsObject other = source.physicsObject();
+    if (other == this) {
+      return;
+    }
 
-    feelForce(normalizedDirection.scale(forceMagnitude), secs);
+    Vec2D offset = other.position().sub(position);
+    Vec2D normalizedDirection = offset.normalized();
+    double forceMagnitude = mass * other.mass() / offset.lengthSquared();
+
+    Vec2D force = normalizedDirection.scale(forceMagnitude);
+
+    feelForce(force, secs);
+    other.feelForce(force.scale(-1.0), secs);
   }
 
   public void feelForce(Vec2D force, double secs) {
@@ -235,6 +254,18 @@ class PhysicsObject {
 
   public void feelImpulse(Vec2D impulse) {
     velocity = velocity.add(impulse.scale(1.0 / mass));
+  }
+}
+
+class GravitySource {
+  private PhysicsObject physicsObject;
+
+  public GravitySource(PhysicsObject physicsObject) {
+    this.physicsObject = physicsObject;
+  }
+
+  public PhysicsObject physicsObject() {
+    return physicsObject;
   }
 }
 
