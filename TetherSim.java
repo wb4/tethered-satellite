@@ -32,6 +32,8 @@ public class TetherSim {
   private static final File EARTH_IMAGE_FILE = new File("earth.png");
   private static final File MAIN_SATELLITE_IMAGE_FILE = new File("satellite_main.png");
 
+  private static final double COLLISION_ELASTICITY = 0.95;
+
   private static final double FPS_DESIRED = 60.0;
 
   private JComponent simCanvas;
@@ -64,9 +66,9 @@ public class TetherSim {
             SATELLITE_RADIUS,
             mainSatelliteImage);
 
-    Vec2D orbitImpulse = calculateOrbitalImpulse(satellite, earth);
+    Vec2D orbitImpulse = calculateOrbitalImpulse(satellite, earth).scale(0.5);
     satellite.feelImpulse(orbitImpulse);
-    earth.feelImpulse(orbitImpulse.scale(-1.0));
+    earth.feelImpulse(orbitImpulse.flip());
 
     this.physicsObjects = new ArrayList<>();
     physicsObjects.add(earth);
@@ -137,6 +139,7 @@ public class TetherSim {
   private void tickPhysics(double secs) {
     applyGravity(secs);
 
+    applyCollisions(secs);
     synchronized (physicsLock) {
       applyMovement(secs);
     }
@@ -146,6 +149,44 @@ public class TetherSim {
     for (PhysicsObject po : physicsObjects) {
       po.feelGravity(earthGravity, secs);
     }
+  }
+
+  private void applyCollisions(double secs) {
+    for (int i = 0; i < physicsObjects.size() - 1; i++) {
+      PhysicsObject a = physicsObjects.get(i);
+      for (int j = i + 1; j < physicsObjects.size(); j++) {
+        PhysicsObject b = physicsObjects.get(j);
+        applyCollision(a, b, secs);
+      }
+    }
+  }
+
+  private void applyCollision(PhysicsObject a, PhysicsObject b, double secs) {
+    double minDistance = a.radius() + b.radius();
+    Vec2D offset = b.position().sub(a.position());
+    if (offset.lengthSquared() >= minDistance * minDistance) {
+      return;
+    }
+
+    Vec2D centerOfMassVelocity = a.momentum().add(b.momentum()).scale(1.0 / (a.mass() + b.mass()));
+
+    Vec2D bRelativeVelocity = b.velocity().sub(centerOfMassVelocity);
+    double speedDotOffset = bRelativeVelocity.dot(offset);
+
+    if (speedDotOffset >= 0.0) {
+      // The two objects are not moving closer to each other.
+      return;
+    }
+
+    double closingSpeed = -speedDotOffset / offset.length();
+
+    double deltaV = closingSpeed * (1.0 + COLLISION_ELASTICITY);
+    double impulseMagnitude = b.mass() * deltaV;
+
+    Vec2D impulse = offset.toLength(impulseMagnitude);
+
+    b.feelImpulse(impulse);
+    a.feelImpulse(impulse.flip());
   }
 
   private void applyMovement(double secs) {
@@ -240,8 +281,16 @@ class PhysicsObject {
     return position;
   }
 
+  public Vec2D velocity() {
+    return velocity;
+  }
+
   public double mass() {
     return mass;
+  }
+
+  public Vec2D momentum() {
+    return velocity.scale(mass);
   }
 
   public double radius() {
@@ -269,7 +318,7 @@ class PhysicsObject {
     Vec2D force = normalizedDirection.scale(forceMagnitude);
 
     feelForce(force, secs);
-    other.feelForce(force.scale(-1.0), secs);
+    other.feelForce(force.flip(), secs);
   }
 
   public void feelForce(Vec2D force, double secs) {
@@ -326,8 +375,16 @@ class Vec2D {
     return scale(1.0 / length());
   }
 
+  public Vec2D flip() {
+    return scale(-1.0);
+  }
+
   public Vec2D toLength(double newLength) {
     return scale(newLength / length());
+  }
+
+  public double dot(Vec2D other) {
+    return x * other.x + y * other.y;
   }
 
   public Vec2D rotate(double radians) {
