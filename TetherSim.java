@@ -32,6 +32,9 @@ public class TetherSim {
   private static final File EARTH_IMAGE_FILE = new File("earth.png");
   private static final File MAIN_SATELLITE_IMAGE_FILE = new File("satellite_main.png");
 
+  // COLLISION_ELASTICITY should be between 0 and a little less than 1 for realistic physics.
+  // 0 means collisions are completely inelastic; 1 means completely elastic.
+  // But stay a little bit under 1, because of energy leakage.
   private static final double COLLISION_ELASTICITY = 0.95;
 
   private static final double FPS_DESIRED = 60.0;
@@ -162,9 +165,13 @@ public class TetherSim {
   }
 
   private void applyCollision(PhysicsObject a, PhysicsObject b, double secs) {
+    // A collision happens when two objects physically overlap *while*
+    // moving towards each other, so first we check for that condition.
+
     double minDistance = a.radius() + b.radius();
     Vec2D offset = b.position().sub(a.position());
     if (offset.lengthSquared() >= minDistance * minDistance) {
+      // The objects don't overlap, so no collision.
       return;
     }
 
@@ -174,9 +181,16 @@ public class TetherSim {
     double speedDotOffset = bRelativeVelocity.dot(offset);
 
     if (speedDotOffset >= 0.0) {
-      // The two objects are not moving closer to each other.
+      // The objects are not moving closer to each other, so no collision.
       return;
     }
+
+    // We resolve the collision by taking the speed at which one of the objects
+    // is moving towards the center of mass of the two-object system, then accelerating
+    // the objects away from each other by the same delta-speed so that they
+    // are no longer moving towards or away from each other.  Then we scale that
+    // delta-speed by the collision elasticity factor and accelerate them again by
+    // the result, so that they don't just stop but in fact bounce away.
 
     double closingSpeed = -speedDotOffset / offset.length();
 
