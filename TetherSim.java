@@ -20,6 +20,8 @@ public class TetherSim {
 
   private static final double SPACE_VIEW_WIDTH = 40000.0;
 
+  private static final double G = 1.0; // gravitational constant
+
   private static final double EARTH_RADIUS = 12742.0 / 2.0;
   private static final double EARTH_MASS = 100000000000.0;
 
@@ -34,7 +36,7 @@ public class TetherSim {
 
   private JComponent simCanvas;
   private List<PhysicsObject> physicsObjects;
-  ;
+
   private GravitySource earthGravity;
 
   private Object physicsLock = new Object();
@@ -50,21 +52,25 @@ public class TetherSim {
     BufferedImage earthImage = loadImageOrDie(EARTH_IMAGE_FILE);
     BufferedImage mainSatelliteImage = loadImageOrDie(MAIN_SATELLITE_IMAGE_FILE);
 
-    PhysicsObject satellite =
-        new PhysicsObject(
-            new Vec2D(0.0, 2.0 * EARTH_RADIUS),
-            new Vec2D(-2800, 0),
-            SATELLITE_MASS,
-            SATELLITE_RADIUS,
-            mainSatelliteImage);
-
     PhysicsObject earth =
         new PhysicsObject(
             new Vec2D(0.0, 0.0), new Vec2D(0.0, 0.0), EARTH_MASS, EARTH_RADIUS, earthImage);
 
+    PhysicsObject satellite =
+        new PhysicsObject(
+            new Vec2D(0.0, 2.0 * EARTH_RADIUS),
+            new Vec2D(0, 0),
+            SATELLITE_MASS,
+            SATELLITE_RADIUS,
+            mainSatelliteImage);
+
+    Vec2D orbitImpulse = calculateOrbitalImpulse(satellite, earth);
+    satellite.feelImpulse(orbitImpulse);
+    earth.feelImpulse(orbitImpulse.scale(-1.0));
+
     this.physicsObjects = new ArrayList<>();
-    physicsObjects.add(satellite);
     physicsObjects.add(earth);
+    physicsObjects.add(satellite);
 
     this.earthGravity = new GravitySource(earth);
 
@@ -87,6 +93,15 @@ public class TetherSim {
     }
 
     return image;
+  }
+
+  private Vec2D calculateOrbitalImpulse(PhysicsObject a, PhysicsObject b) {
+    Vec2D offset = b.position().sub(a.position());
+
+    double impulseMagnitude =
+        a.mass() * b.mass() * Math.sqrt(G / ((a.mass() + b.mass()) * offset.length()));
+
+    return offset.rotate(-Math.PI / 2.0).toLength(impulseMagnitude);
   }
 
   public void start() {
@@ -300,6 +315,17 @@ class Vec2D {
 
   public Vec2D normalized() {
     return scale(1.0 / length());
+  }
+
+  public Vec2D toLength(double newLength) {
+    return scale(newLength / length());
+  }
+
+  public Vec2D rotate(double radians) {
+    double sin = Math.sin(radians);
+    double cos = Math.cos(radians);
+
+    return new Vec2D(x * cos - y * sin, x * sin + y * cos);
   }
 
   public double length() {

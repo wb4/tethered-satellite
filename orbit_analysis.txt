@@ -1,0 +1,118 @@
+We want to find the magnitude of the impulse vector to apply to two masses
+to put them in circular orbits around each other.
+
+
+           O  <-- Object A, with mass Ma
+
+
+                           .  <-- common barycenter
+
+                                      O <-- Object B, with mass Mb
+
+
+
+d = distance between A and B
+
+b = distance from A to barycenter
+
+      Mb
+b = ------- * d
+    Ma + Mb
+
+
+
+Find the linear speed s at which the centripetal acceleration of object A around the
+barycenter is equal to the gravitational acceleration due to the gravity of object B.
+
+
+
+Ag = gravitational acceleration of object A due to the attraction to object B.
+
+     G*Mb
+Ag = ----
+      d^2
+
+
+Ac = centripetal acceleration of object A as it orbits the barycenter.
+
+     s^2
+Ac = ---
+      b
+
+
+So, set them equal, and solve for s.
+
+Ac = Ag
+
+s^2   G*Mb
+--- = ----
+ b     d^2
+
+
+      G * Mb * b
+s^2 = ----------
+         d^2
+
+      G * Mb * Mb * d
+s^2 = ---------------
+      (Ma + Mb) * d^2
+
+        G * Mb^2
+s^2 = -------------
+      (Ma + Mb) * d
+
+         --------------
+        /    G * Mb^2
+s = -  /  -------------
+     \/   (Ma + Mb) * d
+
+
+################################
+#                              #
+#               -------------- #
+#              /       G       #
+# s = Mb * -  /  ------------- #
+#           \/   (Ma + Mb) * d #
+#                              #
+################################
+
+
+Units check:
+
+              -------------------
+m            /    m^3       1
+- = kg * -  /  -------- * ------
+s         \/   kg * s^2   kg * m
+
+              -----------
+m            /     m^2
+- = kg * -  /  ----------
+s         \/   kg^2 * s^2
+
+m           m
+- = kg * ------
+s        kg * s
+
+m   m
+- = -
+s   s
+
+
+
+Impulse calculation:
+
+Assuming the two objects start at rest with respect to each other,
+the orbital speed is equal to the delta-V.
+
+J = M * delta-V
+
+J = Ma * s
+
+#####################################
+#                                   #
+#                    -------------- #
+#                   /       G       #
+# J = Ma * Mb * -  /  ------------- #
+#                \/   (Ma + Mb) * d #
+#                                   #
+#####################################
