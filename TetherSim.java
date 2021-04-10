@@ -135,13 +135,22 @@ public class TetherSim {
   }
 
   private void tickPhysics(double secs) {
+    applyGravity(secs);
+
+    synchronized (physicsLock) {
+      applyMovement(secs);
+    }
+  }
+
+  private void applyGravity(double secs) {
     for (PhysicsObject po : physicsObjects) {
       po.feelGravity(earthGravity, secs);
     }
-    synchronized (physicsLock) {
-      for (PhysicsObject po : physicsObjects) {
-        po.move(secs);
-      }
+  }
+
+  private void applyMovement(double secs) {
+    for (PhysicsObject po : physicsObjects) {
+      po.move(secs);
     }
   }
 }
