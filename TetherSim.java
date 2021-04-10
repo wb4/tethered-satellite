@@ -118,9 +118,7 @@ public class TetherSim {
 
       double tickSecs = (startTimeMillis - lastTickTimeMillis) / 1000.0;
 
-      synchronized (physicsLock) {
-        tickPhysics(tickSecs);
-      }
+      tickPhysics(tickSecs);
 
       simCanvas.repaint();
       lastTickTimeMillis = startTimeMillis;
@@ -140,8 +138,10 @@ public class TetherSim {
     for (PhysicsObject po : physicsObjects) {
       po.feelGravity(earthGravity, secs);
     }
-    for (PhysicsObject po : physicsObjects) {
-      po.move(secs);
+    synchronized (physicsLock) {
+      for (PhysicsObject po : physicsObjects) {
+        po.move(secs);
+      }
     }
   }
 }
