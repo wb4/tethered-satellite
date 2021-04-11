@@ -59,13 +59,19 @@ public class TetherSim {
 
     PhysicsObject earth =
         new PhysicsObject(
-            new Vec2D(0.0, 0.0), new Vec2D(0.0, 0.0), EARTH_MASS, EARTH_RADIUS, earthImage);
+            new Vec2D(0.0, 0.0),
+            new Vec2D(0.0, 0.0),
+            EARTH_MASS,
+            Math.toRadians(23.5),
+            EARTH_RADIUS,
+            earthImage);
 
     PhysicsObject satellite =
         new PhysicsObject(
             new Vec2D(0.0, 2.0 * EARTH_RADIUS),
             new Vec2D(0, 0),
             SATELLITE_MASS,
+            0.0,
             SATELLITE_RADIUS,
             mainSatelliteImage);
 
@@ -253,11 +259,12 @@ class SimCanvas extends JComponent {
 
   private void drawPhysicsObjects(Graphics2D g) {
     for (PhysicsObject po : physicsObjects) {
-      drawImageInWorld(g, po.image(), po.position(), po.radius());
+      drawImageInWorld(g, po.image(), po.position(), po.angleRad(), po.radius());
     }
   }
 
-  private void drawImageInWorld(Graphics2D g, BufferedImage image, Vec2D position, double radius) {
+  private void drawImageInWorld(
+      Graphics2D g, BufferedImage image, Vec2D position, double angleRad, double radius) {
     AffineTransform transform = new AffineTransform();
 
     transform.translate(getWidth() / 2, getHeight() / 2);
@@ -266,6 +273,7 @@ class SimCanvas extends JComponent {
     transform.scale(viewScale, viewScale);
 
     transform.translate(position.x(), -position.y());
+    transform.rotate(-angleRad);
     transform.scale(2.0 * radius / image.getWidth(), 2.0 * radius / image.getHeight());
     transform.translate(-image.getWidth() / 2, -image.getHeight() / 2);
 
@@ -279,14 +287,23 @@ class PhysicsObject {
   private Vec2D position;
   private Vec2D velocity;
   private double mass;
+
+  private double angleRad;
+
   private double radius;
   private BufferedImage image;
 
   public PhysicsObject(
-      Vec2D position, Vec2D velocity, double mass, double radius, BufferedImage image) {
+      Vec2D position,
+      Vec2D velocity,
+      double mass,
+      double angleRad,
+      double radius,
+      BufferedImage image) {
     this.position = position;
     this.velocity = velocity;
     this.mass = mass;
+    this.angleRad = angleRad;
     this.radius = radius;
     this.image = image;
   }
@@ -305,6 +322,10 @@ class PhysicsObject {
 
   public Vec2D momentum() {
     return velocity.scale(mass);
+  }
+
+  public double angleRad() {
+    return angleRad;
   }
 
   public double radius() {
