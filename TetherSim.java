@@ -64,6 +64,7 @@ public class TetherSim {
             EARTH_MASS,
             Math.toRadians(23.5),
             0.0,
+            momentOfInertiaForDisc(EARTH_MASS, EARTH_RADIUS),
             EARTH_RADIUS,
             earthImage);
 
@@ -73,7 +74,8 @@ public class TetherSim {
             new Vec2D(0, 0),
             SATELLITE_MASS,
             0.0,
-            Math.toRadians(-90.0),
+            0.0,
+            momentOfInertiaForDisc(SATELLITE_MASS, SATELLITE_RADIUS),
             SATELLITE_RADIUS,
             mainSatelliteImage);
 
@@ -115,6 +117,10 @@ public class TetherSim {
         a.mass() * b.mass() * Math.sqrt(G / ((a.mass() + b.mass()) * offset.length()));
 
     return offset.rotate(-Math.PI / 2.0).toLength(impulseMagnitude);
+  }
+
+  private double momentOfInertiaForDisc(double mass, double radius) {
+    return 0.5 * mass * radius * radius;
   }
 
   public void start() {
@@ -292,6 +298,7 @@ class PhysicsObject {
 
   private double angleRad;
   private double angularSpeed;
+  private double momentOfInertia;
 
   private double radius;
   private BufferedImage image;
@@ -302,13 +309,17 @@ class PhysicsObject {
       double mass,
       double angleRad,
       double angularSpeed,
+      double momentOfInertia,
       double radius,
       BufferedImage image) {
     this.position = position;
     this.velocity = velocity;
     this.mass = mass;
+
     this.angleRad = angleRad;
     this.angularSpeed = angularSpeed;
+    this.momentOfInertia = momentOfInertia;
+
     this.radius = radius;
     this.image = image;
   }
@@ -344,6 +355,12 @@ class PhysicsObject {
   public void move(double secs) {
     position = position.add(velocity.scale(secs));
     angleRad += angularSpeed * secs;
+    while (angleRad < 0.0) {
+      angleRad += 2.0 * Math.PI;
+    }
+    while (angleRad >= 2.0 * Math.PI) {
+      angleRad -= 2.0 * Math.PI;
+    }
   }
 
   public void feelGravity(GravitySource source, double secs) {
@@ -368,6 +385,14 @@ class PhysicsObject {
 
   public void feelImpulse(Vec2D impulse) {
     velocity = velocity.add(impulse.scale(1.0 / mass));
+  }
+
+  public void feelTorque(double torque, double secs) {
+    feelAngularImpulse(torque * secs);
+  }
+
+  public void feelAngularImpulse(double angularImpulse) {
+    angularSpeed += angularImpulse / momentOfInertia;
   }
 }
 
