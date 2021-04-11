@@ -63,6 +63,7 @@ public class TetherSim {
             new Vec2D(0.0, 0.0),
             EARTH_MASS,
             Math.toRadians(23.5),
+            0.0,
             EARTH_RADIUS,
             earthImage);
 
@@ -72,6 +73,7 @@ public class TetherSim {
             new Vec2D(0, 0),
             SATELLITE_MASS,
             0.0,
+            Math.toRadians(-90.0),
             SATELLITE_RADIUS,
             mainSatelliteImage);
 
@@ -289,6 +291,7 @@ class PhysicsObject {
   private double mass;
 
   private double angleRad;
+  private double angularSpeed;
 
   private double radius;
   private BufferedImage image;
@@ -298,12 +301,14 @@ class PhysicsObject {
       Vec2D velocity,
       double mass,
       double angleRad,
+      double angularSpeed,
       double radius,
       BufferedImage image) {
     this.position = position;
     this.velocity = velocity;
     this.mass = mass;
     this.angleRad = angleRad;
+    this.angularSpeed = angularSpeed;
     this.radius = radius;
     this.image = image;
   }
@@ -338,6 +343,7 @@ class PhysicsObject {
 
   public void move(double secs) {
     position = position.add(velocity.scale(secs));
+    angleRad += angularSpeed * secs;
   }
 
   public void feelGravity(GravitySource source, double secs) {
