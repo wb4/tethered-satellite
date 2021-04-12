@@ -36,6 +36,7 @@ public class TetherSim {
   // 0 means collisions are completely inelastic; 1 means completely elastic.
   // But stay a little bit under 1, because of energy leakage.
   private static final double COLLISION_ELASTICITY = 0.95;
+  private static final double COEFFICIENT_OF_FRICTION = 0.1;
 
   private static final double FPS_DESIRED = 60.0;
 
@@ -215,6 +216,37 @@ public class TetherSim {
 
     b.feelImpulse(impulse);
     a.feelImpulse(impulse.flip());
+
+    // Now we deal with the friction between the two bodies at their point of contact.
+
+    Vec2D vAP = a.velocity().componentPerpendicularTo(offset);
+    Vec2D vBP = b.velocity().componentPerpendicularTo(offset);
+
+    Vec2D u = offset.rotate(Math.PI / 2.0).normalized();
+
+    Vec2D vEA = vAP.add(u.scale(a.radius() * a.angularSpeed()));
+    Vec2D vEB = vBP.sub(u.scale(b.radius() * b.angularSpeed()));
+
+    Vec2D velRelative = vEB.sub(vEA);
+    double velRelativeLen = velRelative.length();
+
+    Vec2D frictionImpulseDir = velRelative.scale(1.0 / velRelativeLen);
+    double frictionImpulseMagnitudeMax =
+        Math.abs(
+            1.0
+                / ((1.0 / a.mass())
+                    + (1.0 / b.mass())
+                    + (Math.pow(a.radius(), 2) / a.momentOfInertia())
+                    + (Math.pow(b.radius(), 2) / b.momentOfInertia()))
+                * velRelativeLen);
+
+    double frictionImpulseMagnitude =
+        Math.min(COEFFICIENT_OF_FRICTION * impulseMagnitude, frictionImpulseMagnitudeMax);
+
+    Vec2D frictionImpulse = frictionImpulseDir.scale(frictionImpulseMagnitude);
+
+    a.feelImpulseAt(frictionImpulse, a.position().add(offset.toLength(a.radius())));
+    b.feelImpulseAt(frictionImpulse.flip(), b.position().sub(offset.toLength(b.radius())));
   }
 
   private void applyMovement(double secs) {
@@ -344,6 +376,14 @@ class PhysicsObject {
     return angleRad;
   }
 
+  public double angularSpeed() {
+    return angularSpeed;
+  }
+
+  public double momentOfInertia() {
+    return momentOfInertia;
+  }
+
   public double radius() {
     return radius;
   }
@@ -385,6 +425,13 @@ class PhysicsObject {
 
   public void feelImpulse(Vec2D impulse) {
     velocity = velocity.add(impulse.scale(1.0 / mass));
+  }
+
+  public void feelImpulseAt(Vec2D impulse, Vec2D impulsePos) {
+    feelImpulse(impulse);
+
+    Vec2D momentArm = impulsePos.sub(position);
+    feelAngularImpulse(momentArm.cross(impulse));
   }
 
   public void feelTorque(double torque, double secs) {
@@ -453,11 +500,23 @@ class Vec2D {
     return x * other.x + y * other.y;
   }
 
+  public double cross(Vec2D other) {
+    return x * other.y - y * other.x;
+  }
+
   public Vec2D rotate(double radians) {
     double sin = Math.sin(radians);
     double cos = Math.cos(radians);
 
     return new Vec2D(x * cos - y * sin, x * sin + y * cos);
+  }
+
+  public Vec2D componentParallelTo(Vec2D other) {
+    return other.scale(dot(other) / other.lengthSquared());
+  }
+
+  public Vec2D componentPerpendicularTo(Vec2D other) {
+    return sub(componentParallelTo(other));
   }
 
   public double length() {
