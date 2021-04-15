@@ -1,7 +1,7 @@
 import java.awt.Dimension;
 import java.awt.image.BufferedImage;
-import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import javax.imageio.ImageIO;
@@ -23,9 +23,9 @@ public class TetherSim {
   private static final double SATELLITE_RADIUS = 600.0;
   private static final double SATELLITE_MASS = 100.0;
 
-  private static final File BACKGROUND_IMAGE_FILE = new File("space_background.jpg");
-  private static final File EARTH_IMAGE_FILE = new File("earth.png");
-  private static final File MAIN_SATELLITE_IMAGE_FILE = new File("satellite_main.png");
+  private static final String BACKGROUND_IMAGE_FILE = "images/space_background.jpg";
+  private static final String EARTH_IMAGE_FILE = "images/earth.png";
+  private static final String MAIN_SATELLITE_IMAGE_FILE = "images/satellite_main.png";
 
   // COLLISION_ELASTICITY should be between 0 and a little less than 1 for realistic physics.
   // 0 means collisions are completely inelastic; 1 means completely elastic.
@@ -90,10 +90,15 @@ public class TetherSim {
     frame.setVisible(true);
   }
 
-  private BufferedImage loadImageOrDie(File imageFile) {
+  private BufferedImage loadImageOrDie(String imageFile) {
     BufferedImage image = null;
     try {
-      image = ImageIO.read(imageFile);
+      InputStream stream = getClass().getResourceAsStream(imageFile);
+      if (stream == null) {
+        System.err.println("cannot find image file: " + imageFile);
+        System.exit(1);
+      }
+      image = ImageIO.read(stream);
     } catch (IOException exc) {
       System.err.println("error loading image " + imageFile + ": " + exc.getMessage());
       System.exit(1);
