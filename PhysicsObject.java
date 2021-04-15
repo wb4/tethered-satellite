@@ -120,6 +120,69 @@ class PhysicsObject {
   }
 }
 
+class PhysicsObjectBuilder {
+  private Vec2D position = new Vec2D(0.0, 0.0);
+  private Vec2D velocity = new Vec2D(0.0, 0.0);
+  private double mass = 1.0;
+  private double angleRad = 0.0;
+  private double angularSpeed = 0.0;
+  private double momentOfInertia = 1.0;
+  private double radius = 1.0;
+  private BufferedImage image = null;
+
+  public PhysicsObjectBuilder position(Vec2D position) {
+    this.position = position;
+    return this;
+  }
+
+  public PhysicsObjectBuilder velocity(Vec2D velocity) {
+    this.velocity = velocity;
+    return this;
+  }
+
+  public PhysicsObjectBuilder mass(double mass) {
+    this.mass = mass;
+    return this;
+  }
+
+  public PhysicsObjectBuilder angleRad(double angleRad) {
+    this.angleRad = angleRad;
+    return this;
+  }
+
+  public PhysicsObjectBuilder angularSpeed(double angularSpeed) {
+    this.angularSpeed = angularSpeed;
+    return this;
+  }
+
+  public PhysicsObjectBuilder momentOfInertia(double momentOfInertia) {
+    this.momentOfInertia = momentOfInertia;
+    return this;
+  }
+
+  public PhysicsObjectBuilder radius(double radius) {
+    this.radius = radius;
+    return this;
+  }
+
+  public PhysicsObjectBuilder image(BufferedImage image) {
+    this.image = image;
+    return this;
+  }
+
+  public PhysicsObject build() {
+    return new PhysicsObject(
+        this.position,
+        this.velocity,
+        this.mass,
+        this.angleRad,
+        this.angularSpeed,
+        this.momentOfInertia,
+        this.radius,
+        this.image);
+  }
+}
+
 class GravitySource {
   private PhysicsObject physicsObject;
 

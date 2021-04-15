@@ -54,26 +54,22 @@ public class TetherSim {
     BufferedImage mainSatelliteImage = loadImageOrDie(MAIN_SATELLITE_IMAGE_FILE);
 
     PhysicsObject earth =
-        new PhysicsObject(
-            new Vec2D(0.0, 0.0),
-            new Vec2D(0.0, 0.0),
-            EARTH_MASS,
-            Math.toRadians(23.5),
-            0.0,
-            momentOfInertiaForDisc(EARTH_MASS, EARTH_RADIUS),
-            EARTH_RADIUS,
-            earthImage);
+        new PhysicsObjectBuilder()
+            .mass(EARTH_MASS)
+            .angleRad(Math.toRadians(23.5))
+            .momentOfInertia(momentOfInertiaForDisc(EARTH_MASS, EARTH_RADIUS))
+            .radius(EARTH_RADIUS)
+            .image(earthImage)
+            .build();
 
     PhysicsObject satellite =
-        new PhysicsObject(
-            new Vec2D(0.0, 2.0 * EARTH_RADIUS),
-            new Vec2D(0, 0),
-            SATELLITE_MASS,
-            0.0,
-            0.0,
-            momentOfInertiaForDisc(SATELLITE_MASS, SATELLITE_RADIUS),
-            SATELLITE_RADIUS,
-            mainSatelliteImage);
+        new PhysicsObjectBuilder()
+            .position(new Vec2D(0.0, 2.0 * EARTH_RADIUS))
+            .mass(SATELLITE_MASS)
+            .momentOfInertia(momentOfInertiaForDisc(SATELLITE_MASS, SATELLITE_RADIUS))
+            .radius(SATELLITE_RADIUS)
+            .image(mainSatelliteImage)
+            .build();
 
     Vec2D orbitImpulse = calculateOrbitalImpulse(satellite, earth).scale(0.5);
     satellite.feelImpulse(orbitImpulse);
