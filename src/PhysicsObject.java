@@ -12,6 +12,11 @@ class PhysicsObject {
   double radius = 1.0;
   BufferedImage image = null;
 
+  Vec2D hookUplink = new Vec2D();
+  Vec2D hookDownlink = new Vec2D();
+
+  PhysicsObject downlinkObject = null;
+
   PhysicsObject() {}
 
   public Vec2D position() {
@@ -48,6 +53,22 @@ class PhysicsObject {
 
   public BufferedImage image() {
     return image;
+  }
+
+  public Vec2D hookUplinkWorldCoords() {
+    return localToWorldCoords(hookUplink);
+  }
+
+  public Vec2D hookDownlinkWorldCoords() {
+    return localToWorldCoords(hookDownlink);
+  }
+
+  public Vec2D localToWorldCoords(Vec2D vec) {
+    return vec.rotate(angleRad).add(position);
+  }
+
+  public PhysicsObject downlinkObject() {
+    return downlinkObject;
   }
 
   public void move(double secs) {
@@ -141,6 +162,21 @@ class PhysicsObjectBuilder {
 
   public PhysicsObjectBuilder image(BufferedImage image) {
     o.image = image;
+    return this;
+  }
+
+  public PhysicsObjectBuilder hookUplink(Vec2D hookUplink) {
+    o.hookUplink = hookUplink;
+    return this;
+  }
+
+  public PhysicsObjectBuilder hookDownlink(Vec2D hookDownlink) {
+    o.hookDownlink = hookDownlink;
+    return this;
+  }
+
+  public PhysicsObjectBuilder downlinkObject(PhysicsObject downlinkObject) {
+    o.downlinkObject = downlinkObject;
     return this;
   }
 

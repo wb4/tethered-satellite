@@ -20,12 +20,16 @@ public class TetherSim {
   private static final double EARTH_RADIUS = 12742.0 / 2.0;
   private static final double EARTH_MASS = 100000000000.0;
 
-  private static final double SATELLITE_RADIUS = 600.0;
-  private static final double SATELLITE_MASS = 100.0;
+  private static final double MAIN_SATELLITE_RADIUS = 600.0;
+  private static final double MAIN_SATELLITE_MASS = 100.0;
+
+  private static final double SECONDARY_SATELLITE_RADIUS = 400.0;
+  private static final double SECONDARY_SATELLITE_MASS = 70.0;
 
   private static final String BACKGROUND_IMAGE_FILE = "images/space_background.jpg";
   private static final String EARTH_IMAGE_FILE = "images/earth.png";
   private static final String MAIN_SATELLITE_IMAGE_FILE = "images/satellite_main.png";
+  private static final String SECONDARY_SATELLITE_IMAGE_FILE = "images/satellite_secondary.png";
 
   // COLLISION_ELASTICITY should be between 0 and a little less than 1 for realistic physics.
   // 0 means collisions are completely inelastic; 1 means completely elastic.
@@ -52,6 +56,7 @@ public class TetherSim {
     BufferedImage backgroundImage = loadImageOrDie(BACKGROUND_IMAGE_FILE);
     BufferedImage earthImage = loadImageOrDie(EARTH_IMAGE_FILE);
     BufferedImage mainSatelliteImage = loadImageOrDie(MAIN_SATELLITE_IMAGE_FILE);
+    BufferedImage secondarySatelliteImage = loadImageOrDie(SECONDARY_SATELLITE_IMAGE_FILE);
 
     PhysicsObject earth =
         new PhysicsObjectBuilder()
@@ -62,22 +67,36 @@ public class TetherSim {
             .image(earthImage)
             .build();
 
-    PhysicsObject satellite =
+    PhysicsObject secondarySatellite =
         new PhysicsObjectBuilder()
-            .position(new Vec2D(0.0, 2.0 * EARTH_RADIUS))
-            .mass(SATELLITE_MASS)
-            .momentOfInertia(momentOfInertiaForDisc(SATELLITE_MASS, SATELLITE_RADIUS))
-            .radius(SATELLITE_RADIUS)
-            .image(mainSatelliteImage)
+            .position(new Vec2D(1.0 * EARTH_RADIUS, 1.0 * EARTH_RADIUS))
+            .mass(SECONDARY_SATELLITE_MASS)
+            .momentOfInertia(
+                momentOfInertiaForDisc(SECONDARY_SATELLITE_MASS, SECONDARY_SATELLITE_RADIUS))
+            .radius(SECONDARY_SATELLITE_RADIUS)
+            .image(secondarySatelliteImage)
+            .hookUplink(new Vec2D(0.0, 0.90 * SECONDARY_SATELLITE_RADIUS))
             .build();
 
-    Vec2D orbitImpulse = calculateOrbitalImpulse(satellite, earth).scale(0.5);
-    satellite.feelImpulse(orbitImpulse);
+    PhysicsObject mainSatellite =
+        new PhysicsObjectBuilder()
+            .position(new Vec2D(0.0, 2.0 * EARTH_RADIUS))
+            .mass(MAIN_SATELLITE_MASS)
+            .momentOfInertia(momentOfInertiaForDisc(MAIN_SATELLITE_MASS, MAIN_SATELLITE_RADIUS))
+            .radius(MAIN_SATELLITE_RADIUS)
+            .image(mainSatelliteImage)
+            .hookDownlink(new Vec2D(0.0, -0.5 * MAIN_SATELLITE_RADIUS))
+            .downlinkObject(secondarySatellite)
+            .build();
+
+    Vec2D orbitImpulse = calculateOrbitalImpulse(mainSatellite, earth).scale(0.5);
+    mainSatellite.feelImpulse(orbitImpulse);
     earth.feelImpulse(orbitImpulse.flip());
 
     this.physicsObjects = new ArrayList<>();
     physicsObjects.add(earth);
-    physicsObjects.add(satellite);
+    physicsObjects.add(mainSatellite);
+    physicsObjects.add(secondarySatellite);
 
     this.earthGravity = new GravitySource(earth);
 
