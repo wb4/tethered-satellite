@@ -2,6 +2,10 @@ class Vec2D {
   private double x;
   private double y;
 
+  public Vec2D() {
+    this(0.0, 0.0);
+  }
+
   public Vec2D(double x, double y) {
     this.x = x;
     this.y = y;

@@ -1,37 +1,18 @@
 import java.awt.image.BufferedImage;
 
 class PhysicsObject {
-  private Vec2D position;
-  private Vec2D velocity;
-  private double mass;
+  Vec2D position = new Vec2D();
+  Vec2D velocity = new Vec2D();
+  double mass = 1.0;
 
-  private double angleRad;
-  private double angularSpeed;
-  private double momentOfInertia;
+  double angleRad = 0.0;
+  double angularSpeed = 0.0;
+  double momentOfInertia = 1.0;
 
-  private double radius;
-  private BufferedImage image;
+  double radius = 1.0;
+  BufferedImage image = null;
 
-  public PhysicsObject(
-      Vec2D position,
-      Vec2D velocity,
-      double mass,
-      double angleRad,
-      double angularSpeed,
-      double momentOfInertia,
-      double radius,
-      BufferedImage image) {
-    this.position = position;
-    this.velocity = velocity;
-    this.mass = mass;
-
-    this.angleRad = angleRad;
-    this.angularSpeed = angularSpeed;
-    this.momentOfInertia = momentOfInertia;
-
-    this.radius = radius;
-    this.image = image;
-  }
+  PhysicsObject() {}
 
   public Vec2D position() {
     return position;
@@ -121,65 +102,50 @@ class PhysicsObject {
 }
 
 class PhysicsObjectBuilder {
-  private Vec2D position = new Vec2D(0.0, 0.0);
-  private Vec2D velocity = new Vec2D(0.0, 0.0);
-  private double mass = 1.0;
-  private double angleRad = 0.0;
-  private double angularSpeed = 0.0;
-  private double momentOfInertia = 1.0;
-  private double radius = 1.0;
-  private BufferedImage image = null;
+  private PhysicsObject o = new PhysicsObject();
 
   public PhysicsObjectBuilder position(Vec2D position) {
-    this.position = position;
+    o.position = position;
     return this;
   }
 
   public PhysicsObjectBuilder velocity(Vec2D velocity) {
-    this.velocity = velocity;
+    o.velocity = velocity;
     return this;
   }
 
   public PhysicsObjectBuilder mass(double mass) {
-    this.mass = mass;
+    o.mass = mass;
     return this;
   }
 
   public PhysicsObjectBuilder angleRad(double angleRad) {
-    this.angleRad = angleRad;
+    o.angleRad = angleRad;
     return this;
   }
 
   public PhysicsObjectBuilder angularSpeed(double angularSpeed) {
-    this.angularSpeed = angularSpeed;
+    o.angularSpeed = angularSpeed;
     return this;
   }
 
   public PhysicsObjectBuilder momentOfInertia(double momentOfInertia) {
-    this.momentOfInertia = momentOfInertia;
+    o.momentOfInertia = momentOfInertia;
     return this;
   }
 
   public PhysicsObjectBuilder radius(double radius) {
-    this.radius = radius;
+    o.radius = radius;
     return this;
   }
 
   public PhysicsObjectBuilder image(BufferedImage image) {
-    this.image = image;
+    o.image = image;
     return this;
   }
 
   public PhysicsObject build() {
-    return new PhysicsObject(
-        this.position,
-        this.velocity,
-        this.mass,
-        this.angleRad,
-        this.angularSpeed,
-        this.momentOfInertia,
-        this.radius,
-        this.image);
+    return o;
   }
 }
 
