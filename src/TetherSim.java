@@ -35,6 +35,9 @@ public class TetherSim {
   // 0 means collisions are completely inelastic; 1 means completely elastic.
   // But stay a little bit under 1, because of energy leakage.
   private static final double COLLISION_ELASTICITY = 0.95;
+
+  private static final double TETHER_REBOUND_ELASTICITY = 0.5;
+
   private static final double COEFFICIENT_OF_FRICTION = 0.1;
 
   private static final double FPS_DESIRED = 60.0;
@@ -69,7 +72,7 @@ public class TetherSim {
 
     PhysicsObject secondarySatellite =
         new PhysicsObjectBuilder()
-            .position(new Vec2D(1.0 * EARTH_RADIUS, 1.0 * EARTH_RADIUS))
+            .position(new Vec2D(0.0, 2.0 * EARTH_RADIUS))
             .mass(SECONDARY_SATELLITE_MASS)
             .momentOfInertia(
                 momentOfInertiaForDisc(SECONDARY_SATELLITE_MASS, SECONDARY_SATELLITE_RADIUS))
@@ -80,17 +83,25 @@ public class TetherSim {
 
     PhysicsObject mainSatellite =
         new PhysicsObjectBuilder()
-            .position(new Vec2D(0.0, 2.0 * EARTH_RADIUS))
+            .position(new Vec2D(0.0, 3.0 * EARTH_RADIUS))
             .mass(MAIN_SATELLITE_MASS)
             .momentOfInertia(momentOfInertiaForDisc(MAIN_SATELLITE_MASS, MAIN_SATELLITE_RADIUS))
             .radius(MAIN_SATELLITE_RADIUS)
             .image(mainSatelliteImage)
             .hookDownlink(new Vec2D(0.0, -0.5 * MAIN_SATELLITE_RADIUS))
             .downlinkObject(secondarySatellite)
+            .tetherMaxLength(
+                secondarySatellite
+                    .hookUplinkWorldCoords()
+                    .distanceTo(new Vec2D(0.0, 3.0 * EARTH_RADIUS)))
             .build();
 
-    Vec2D orbitImpulse = calculateOrbitalImpulse(mainSatellite, earth).scale(0.5);
+    Vec2D orbitImpulse = calculateOrbitalImpulse(mainSatellite, earth).scale(1.5);
     mainSatellite.feelImpulse(orbitImpulse);
+    earth.feelImpulse(orbitImpulse.flip());
+
+    orbitImpulse = calculateOrbitalImpulse(secondarySatellite, earth).scale(0.5);
+    secondarySatellite.feelImpulse(orbitImpulse);
     earth.feelImpulse(orbitImpulse.flip());
 
     this.physicsObjects = new ArrayList<>();
@@ -172,6 +183,7 @@ public class TetherSim {
   private void tickPhysics(double secs) {
     applyGravity(secs);
 
+    applyTetherRebounds(secs);
     applyCollisions(secs);
     synchronized (physicsLock) {
       applyMovement(secs);
@@ -181,6 +193,14 @@ public class TetherSim {
   private void applyGravity(double secs) {
     for (PhysicsObject po : physicsObjects) {
       po.feelGravity(earthGravity, secs);
+    }
+  }
+
+  private void applyTetherRebounds(double secs) {
+    for (PhysicsObject po : physicsObjects) {
+      if (po.downlinkObject() != null) {
+        applyTetherRebound(po);
+      }
     }
   }
 
@@ -262,6 +282,52 @@ public class TetherSim {
 
     a.feelImpulseAt(frictionImpulse, a.position().add(offset.toLength(a.radius())));
     b.feelImpulseAt(frictionImpulse.flip(), b.position().sub(offset.toLength(b.radius())));
+  }
+
+  private void applyTetherRebound(PhysicsObject a) {
+    // A tether rebound happens when the two endpoints of the tether are
+    // farther apart than its maximum length *while* the endpoints are moving
+    // away from each other, so we check for that first.
+
+    PhysicsObject b = a.downlinkObject();
+
+    Vec2D aHook = a.hookDownlinkWorldCoords();
+    Vec2D bHook = b.hookDownlinkWorldCoords();
+
+    if (aHook.distanceSquaredTo(bHook) <= a.tetherMaxLength * a.tetherMaxLength) {
+      // The two ends of the tether are not far enough apart to cause it to rebound.
+      return;
+    }
+
+    Vec2D offset = bHook.sub(aHook);
+    Vec2D offsetUnit = offset.toLength(1.0);
+
+    Vec2D uA = aHook.sub(a.position()).rotate(Math.PI / 2.0);
+    Vec2D uB = bHook.sub(b.position()).rotate(Math.PI / 2.0);
+
+    Vec2D vHa = a.velocity().add(uA.scale(a.angularSpeed()));
+    Vec2D vHb = b.velocity().add(uB.scale(b.angularSpeed()));
+
+    double vHaP = vHa.dot(offsetUnit);
+    double vHbP = vHb.dot(offsetUnit);
+
+    if (vHbP <= vHaP) {
+      // The two ends of the tether are not moving away from each other, so there
+      // is no rebound.
+      return;
+    }
+
+    double impulseMagnitude =
+        (vHbP - vHaP)
+            / (1.0 / a.mass()
+                + 1.0 / b.mass()
+                + Math.pow(uA.dot(offsetUnit), 2.0) / a.momentOfInertia()
+                + Math.pow(uB.dot(offsetUnit), 2.0) / b.momentOfInertia());
+
+    Vec2D impulse = offsetUnit.scale(impulseMagnitude * (1.0 + TETHER_REBOUND_ELASTICITY));
+
+    a.feelImpulseAt(impulse, aHook);
+    b.feelImpulseAt(impulse.flip(), bHook);
   }
 
   private void applyMovement(double secs) {

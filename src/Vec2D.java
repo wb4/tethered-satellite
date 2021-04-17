@@ -74,6 +74,14 @@ class Vec2D {
     return x * x + y * y;
   }
 
+  public double distanceTo(Vec2D other) {
+    return Math.sqrt(distanceSquaredTo(other));
+  }
+
+  public double distanceSquaredTo(Vec2D other) {
+    return sub(other).lengthSquared();
+  }
+
   public String toString() {
     return "Vec2D { " + x + ", " + y + " }";
   }

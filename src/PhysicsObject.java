@@ -17,6 +17,8 @@ class PhysicsObject {
 
   PhysicsObject downlinkObject = null;
 
+  double tetherMaxLength = 1.0;
+
   PhysicsObject() {}
 
   public Vec2D position() {
@@ -69,6 +71,10 @@ class PhysicsObject {
 
   public PhysicsObject downlinkObject() {
     return downlinkObject;
+  }
+
+  public double tetherMaxLength() {
+    return tetherMaxLength;
   }
 
   public void move(double secs) {
@@ -177,6 +183,11 @@ class PhysicsObjectBuilder {
 
   public PhysicsObjectBuilder downlinkObject(PhysicsObject downlinkObject) {
     o.downlinkObject = downlinkObject;
+    return this;
+  }
+
+  public PhysicsObjectBuilder tetherMaxLength(double tetherMaxLength) {
+    o.tetherMaxLength = tetherMaxLength;
     return this;
   }
 
