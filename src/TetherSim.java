@@ -288,7 +288,7 @@ public class TetherSim {
     PhysicsObject b = a.downlinkObject();
 
     Vec2D aHook = a.hookDownlinkWorldCoords();
-    Vec2D bHook = b.hookDownlinkWorldCoords();
+    Vec2D bHook = b.hookUplinkWorldCoords();
 
     if (aHook.distanceSquaredTo(bHook) <= a.tetherMaxLength * a.tetherMaxLength) {
       // The two ends of the tether are not far enough apart to cause it to rebound.
