@@ -61,17 +61,17 @@ s^2 = ---------------
 s^2 = -------------
       (Ma + Mb) * d
 
-         --------------
+         ______________
         /    G * Mb^2
-s = -  /  -------------
+s = _  /  -------------
      \/   (Ma + Mb) * d
 
 
 ################################
 #                              #
-#               -------------- #
+#               ______________ #
 #              /       G       #
-# s = Mb * -  /  ------------- #
+# s = Mb * _  /  ------------- #
 #           \/   (Ma + Mb) * d #
 #                              #
 ################################
@@ -79,14 +79,14 @@ s = -  /  -------------
 
 Units check:
 
-              -------------------
+              ___________________
 m            /    m^3       1
-- = kg * -  /  -------- * ------
+- = kg * _  /  -------- * ------
 s         \/   kg * s^2   kg * m
 
-              -----------
+              ___________
 m            /     m^2
-- = kg * -  /  ----------
+- = kg * _  /  ----------
 s         \/   kg^2 * s^2
 
 m           m
@@ -110,9 +110,61 @@ J = Ma * s
 
 #####################################
 #                                   #
-#                    -------------- #
+#                    ______________ #
 #                   /       G       #
-# J = Ma * Mb * -  /  ------------- #
+# J = Ma * Mb * _  /  ------------- #
 #                \/   (Ma + Mb) * d #
 #                                   #
 #####################################
+
+
+
+For a system in which one object is a point mass and the other is a string of tethered
+point masses oriented along the line that connects all the objects to the barycenter:
+
+The tethered string of bodis have masses Mb1, Mb2, ..., MbN and distances d1, d2, ..., dN.
+
+The total gravitational acceleration felt by object A is the sum from all these objects:
+
+        ( G*Mb1   G*Mb2         G*MbN )
+Ag = sum( ----- + ----- + ... + ----- )
+        ( d1^2    d2^2          dN^2  )
+
+            ( Mb1    Mb2          MbN  )
+   = G * sum( ---- + ---- + ... + ---- )
+            ( d1^2   d2^2         dN^2 )
+
+
+Centripetal acceleration is the same:
+
+     s^2
+Ac = ---
+      b
+
+However, we're more interested in finding the angular speed, w, than the linear speed.
+So let's express the centripetal acceleration in terms of angular speed:
+
+s = w*b
+
+     (w*b)^2
+Ac = -------
+        b
+
+   = b*w^2
+
+Set them equal:
+
+Ac = Ag
+
+               ( Mb1    Mb2          MbN  )
+b*w^2 = G * sum( ---- + ---- + ... + ---- )
+               ( d1^2   d2^2         dN^2 )
+
+      G      ( Mb1    Mb2          MbN  )
+w^2 = - * sum( ---- + ---- + ... + ---- )
+      b      ( d1^2   d2^2         dN^2 )
+
+         ____________________________________
+        / G      ( Mb1    Mb2          MbN  )
+w = _  /  - * sum( ---- + ---- + ... + ---- )
+     \/   b      ( d1^2   d2^2         dN^2 )
