@@ -89,11 +89,7 @@ public class TetherSim {
             .radius(MAIN_SATELLITE_RADIUS)
             .image(mainSatelliteImage)
             .hookDownlink(new Vec2D(0.0, -0.5 * MAIN_SATELLITE_RADIUS))
-            .downlinkObject(secondarySatellite)
-            .tetherMaxLength(
-                secondarySatellite
-                    .hookUplinkWorldCoords()
-                    .distanceTo(new Vec2D(0.0, 3.0 * EARTH_RADIUS)))
+            .downlinkTo(secondarySatellite)
             .build();
 
     Vec2D orbitImpulse = calculateOrbitalImpulse(mainSatellite, earth).scale(1.5);

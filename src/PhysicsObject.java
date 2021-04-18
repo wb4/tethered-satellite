@@ -181,17 +181,16 @@ class PhysicsObjectBuilder {
     return this;
   }
 
-  public PhysicsObjectBuilder downlinkObject(PhysicsObject downlinkObject) {
+  public PhysicsObjectBuilder downlinkTo(PhysicsObject downlinkObject) {
     o.downlinkObject = downlinkObject;
     return this;
   }
 
-  public PhysicsObjectBuilder tetherMaxLength(double tetherMaxLength) {
-    o.tetherMaxLength = tetherMaxLength;
-    return this;
-  }
-
   public PhysicsObject build() {
+    if (o.downlinkObject != null) {
+      o.tetherMaxLength =
+          o.hookDownlinkWorldCoords().distanceTo(o.downlinkObject.hookUplinkWorldCoords());
+    }
     return o;
   }
 }
