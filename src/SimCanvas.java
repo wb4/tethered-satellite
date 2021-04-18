@@ -60,7 +60,9 @@ class SimCanvas extends JComponent {
 
   private void drawImages(Graphics2D g) {
     for (PhysicsObject po : physicsObjects) {
-      drawImageInWorld(g, po.image(), po.position(), po.angleRad(), po.radius());
+      if (po.image() != null) {
+        drawImageInWorld(g, po.image(), po.position(), po.angleRad(), po.radius());
+      }
     }
   }
 
