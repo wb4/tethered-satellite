@@ -14,6 +14,7 @@ import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JRadioButton;
+import javax.swing.border.EmptyBorder;
 
 public class TetherSim {
 
@@ -287,10 +288,12 @@ public class TetherSim {
 
     tetherHoldButton.setSelected(true);
 
+    final int padding = 10;
     final int titleMargin = 20;
     final int buttonMargin = 10;
 
     Box box = Box.createVerticalBox();
+    box.setBorder(new EmptyBorder(padding, padding, padding, padding));
 
     box.add(Box.createVerticalGlue());
 
