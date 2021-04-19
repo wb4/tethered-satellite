@@ -22,9 +22,14 @@ public class TetherSim {
 
   private static final double MAIN_SATELLITE_RADIUS = 600.0;
   private static final double MAIN_SATELLITE_MASS = 100.0;
+  private static final double MAIN_SATELLITE_DISTANCE = 2.3 * EARTH_RADIUS;
 
   private static final double SECONDARY_SATELLITE_RADIUS = 400.0;
   private static final double SECONDARY_SATELLITE_MASS = 70.0;
+  private static final double SECONDARY_SATELLITE_DISTANCE = 2.1 * EARTH_RADIUS;
+
+  private static final double TETHER_PIECE_MASS = 10;
+  private static final int TETHER_PIECE_COUNT = 20;
 
   private static final String BACKGROUND_IMAGE_FILE = "images/space_background.jpg";
   private static final String EARTH_IMAGE_FILE = "images/earth.png";
@@ -36,7 +41,7 @@ public class TetherSim {
   // But stay a little bit under 1, because of energy leakage.
   private static final double COLLISION_ELASTICITY = 0.95;
 
-  private static final double TETHER_REBOUND_ELASTICITY = 0.5;
+  private static final double TETHER_REBOUND_ELASTICITY = 1.0;
 
   private static final double COEFFICIENT_OF_FRICTION = 0.1;
 
@@ -61,6 +66,8 @@ public class TetherSim {
     BufferedImage mainSatelliteImage = loadImageOrDie(MAIN_SATELLITE_IMAGE_FILE);
     BufferedImage secondarySatelliteImage = loadImageOrDie(SECONDARY_SATELLITE_IMAGE_FILE);
 
+    this.physicsObjects = new ArrayList<>();
+
     PhysicsObject earth =
         new PhysicsObjectBuilder()
             .mass(EARTH_MASS)
@@ -70,40 +77,20 @@ public class TetherSim {
             .image(earthImage)
             .build();
 
-    PhysicsObject secondarySatellite =
-        new PhysicsObjectBuilder()
-            .position(new Vec2D(0.0, 2.0 * EARTH_RADIUS))
-            .mass(SECONDARY_SATELLITE_MASS)
-            .momentOfInertia(
-                momentOfInertiaForDisc(SECONDARY_SATELLITE_MASS, SECONDARY_SATELLITE_RADIUS))
-            .radius(SECONDARY_SATELLITE_RADIUS)
-            .image(secondarySatelliteImage)
-            .hookUplink(new Vec2D(0.0, 0.90 * SECONDARY_SATELLITE_RADIUS))
-            .build();
-
-    PhysicsObject mainSatellite =
-        new PhysicsObjectBuilder()
-            .position(new Vec2D(0.0, 3.0 * EARTH_RADIUS))
-            .mass(MAIN_SATELLITE_MASS)
-            .momentOfInertia(momentOfInertiaForDisc(MAIN_SATELLITE_MASS, MAIN_SATELLITE_RADIUS))
-            .radius(MAIN_SATELLITE_RADIUS)
-            .image(mainSatelliteImage)
-            .hookDownlink(new Vec2D(0.0, -0.5 * MAIN_SATELLITE_RADIUS))
-            .downlinkTo(secondarySatellite)
-            .build();
-
-    Vec2D orbitImpulse = calculateOrbitalImpulse(mainSatellite, earth).scale(1.5);
-    mainSatellite.feelImpulse(orbitImpulse);
-    earth.feelImpulse(orbitImpulse.flip());
-
-    orbitImpulse = calculateOrbitalImpulse(secondarySatellite, earth).scale(0.5);
-    secondarySatellite.feelImpulse(orbitImpulse);
-    earth.feelImpulse(orbitImpulse.flip());
-
-    this.physicsObjects = new ArrayList<>();
     physicsObjects.add(earth);
-    physicsObjects.add(mainSatellite);
-    physicsObjects.add(secondarySatellite);
+
+    physicsObjects.addAll(
+        createOrbitingTetheredSatellite(
+            earth,
+            MAIN_SATELLITE_DISTANCE,
+            MAIN_SATELLITE_MASS,
+            MAIN_SATELLITE_RADIUS,
+            mainSatelliteImage,
+            SECONDARY_SATELLITE_DISTANCE,
+            SECONDARY_SATELLITE_MASS,
+            SECONDARY_SATELLITE_RADIUS,
+            secondarySatelliteImage,
+            TETHER_PIECE_COUNT));
 
     this.earthGravity = new GravitySource(earth);
 
@@ -131,6 +118,108 @@ public class TetherSim {
     }
 
     return image;
+  }
+
+  private List<PhysicsObject> createOrbitingTetheredSatellite(
+      PhysicsObject earth,
+      double distanceA,
+      double massA,
+      double radiusA,
+      BufferedImage imageA,
+      double distanceB,
+      double massB,
+      double radiusB,
+      BufferedImage imageB,
+      int tetherPieceCount) {
+    PhysicsObject objB = createSatellite(distanceB, massB, radiusB, imageB, null);
+    List<PhysicsObject> tether = createTether(objB, distanceA - radiusA, tetherPieceCount);
+    PhysicsObject objA =
+        createSatellite(distanceA, massA, radiusA, imageA, tether.get(tether.size() - 1));
+
+    List<PhysicsObject> satellite = new ArrayList<>(tether);
+    satellite.add(objA);
+    satellite.add(objB);
+
+    pushTetheredSatelliteIntoCircularOrbit(satellite, earth);
+
+    return satellite;
+  }
+
+  private PhysicsObject createSatellite(
+      double distance,
+      double mass,
+      double radius,
+      BufferedImage image,
+      PhysicsObject downlinkObject) {
+    PhysicsObjectBuilder builder =
+        new PhysicsObjectBuilder()
+            .position(new Vec2D(0.0, distance))
+            .mass(mass)
+            .radius(radius)
+            .momentOfInertia(momentOfInertiaForDisc(mass, radius))
+            .image(image)
+            .hookUplink(new Vec2D(0.0, radius))
+            .hookDownlink(new Vec2D(0.0, -radius));
+
+    if (downlinkObject != null) {
+      builder.downlinkTo(downlinkObject);
+    }
+
+    return builder.build();
+  }
+
+  private List<PhysicsObject> createTether(
+      PhysicsObject bottomObject, double topHookDistance, int pieceCount) {
+    double bottomHookDistance = bottomObject.hookUplinkWorldCoords().length();
+
+    List<PhysicsObject> tether = new ArrayList<>();
+
+    for (int i = 0; i < pieceCount; i++) {
+      double distance =
+          bottomHookDistance
+              + (i + 1) * ((topHookDistance - bottomHookDistance) / (pieceCount + 1));
+
+      PhysicsObject piece =
+          new PhysicsObjectBuilder()
+              .position(new Vec2D(0.0, distance))
+              .downlinkTo(tether.size() == 0 ? bottomObject : tether.get(tether.size() - 1))
+              .mass(TETHER_PIECE_MASS)
+              .build();
+      tether.add(piece);
+    }
+
+    return tether;
+  }
+
+  private void pushTetheredSatelliteIntoCircularOrbit(
+      List<PhysicsObject> satellite, PhysicsObject earth) {
+    Vec2D positionWeightedSum =
+        earth
+            .position()
+            .scale(earth.mass())
+            .add(
+                satellite.stream()
+                    .map(po -> po.position().scale(po.mass()))
+                    .reduce(new Vec2D(), (a, b) -> a.add(b)));
+    double massTotal = earth.mass() + satellite.stream().mapToDouble(po -> po.mass()).sum();
+    Vec2D barycenter = positionWeightedSum.scale(1.0 / massTotal);
+    double b = earth.position().distanceTo(barycenter);
+
+    double massOverDistanceSquaredSum =
+        satellite.stream()
+            .mapToDouble(po -> po.mass() / (po.position().distanceSquaredTo(earth.position())))
+            .sum();
+
+    double angularSpeed = Math.sqrt(G * massOverDistanceSquaredSum / b);
+
+    for (PhysicsObject po : satellite) {
+      Vec2D velocity = po.position().sub(barycenter).rotate(Math.PI / 2.0).scale(angularSpeed);
+      Vec2D impulse = velocity.scale(po.mass());
+      po.feelImpulse(impulse);
+      earth.feelImpulse(impulse.flip());
+
+      po.feelAngularImpulse(angularSpeed * po.momentOfInertia());
+    }
   }
 
   private Vec2D calculateOrbitalImpulse(PhysicsObject a, PhysicsObject b) {
@@ -183,6 +272,24 @@ public class TetherSim {
     applyCollisions(secs);
     synchronized (physicsLock) {
       applyMovement(secs);
+    }
+  }
+
+  private void checkNaN(String operation) {
+    for (PhysicsObject po : physicsObjects) {
+      checkNaN(po.velocity(), operation);
+    }
+  }
+
+  private void checkNaN(Vec2D vec, String operation) {
+    checkNaN(vec.x(), operation);
+    checkNaN(vec.y(), operation);
+  }
+
+  private void checkNaN(double val, String operation) {
+    if (Double.isNaN(val)) {
+      System.out.println("NaN after " + operation);
+      System.exit(1);
     }
   }
 
@@ -260,6 +367,13 @@ public class TetherSim {
 
     Vec2D velRelative = vEB.sub(vEA);
     double velRelativeLen = velRelative.length();
+    if (velRelativeLen == 0.0) {
+      // The two surfaces are not sliding along each other, so there
+      // is no friction to apply.  In fact, we'd get NaN everywhere
+      // if we were to try, because the very next thing we do is divide
+      // by velRelativeLen.
+      return;
+    }
 
     Vec2D frictionImpulseDir = velRelative.scale(1.0 / velRelativeLen);
     double frictionImpulseMagnitudeMax =
