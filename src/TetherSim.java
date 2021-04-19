@@ -1,12 +1,19 @@
+import java.awt.BorderLayout;
 import java.awt.Dimension;
+import java.awt.event.ActionEvent;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import javax.imageio.ImageIO;
+import javax.swing.AbstractAction;
+import javax.swing.Box;
+import javax.swing.ButtonGroup;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JRadioButton;
 
 public class TetherSim {
 
@@ -48,25 +55,45 @@ public class TetherSim {
   private static final double FPS_DESIRED = 60.0;
 
   private JComponent simCanvas;
-  private List<PhysicsObject> physicsObjects;
+  private JRadioButton tetherHoldButton;
+
+  private List<PhysicsObject> physicsObjects = new ArrayList<>();
 
   private GravitySource earthGravity;
 
   private Object physicsLock = new Object();
+
+  private enum TetherState {
+    RETRACTING,
+    HOLDING,
+    EXTENDING,
+  }
+
+  private TetherState tetherState = TetherState.HOLDING;
 
   public static void main(String[] args) {
     new TetherSim().start();
   }
 
   public TetherSim() {
+    createSimCanvas();
+    JComponent tetherControl = createTetherControl();
+
     JFrame frame = new JFrame("TetherSim");
 
+    frame.add(simCanvas);
+    frame.add(tetherControl, BorderLayout.EAST);
+
+    frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+    frame.pack();
+    frame.setVisible(true);
+  }
+
+  private void createSimCanvas() {
     BufferedImage backgroundImage = loadImageOrDie(BACKGROUND_IMAGE_FILE);
     BufferedImage earthImage = loadImageOrDie(EARTH_IMAGE_FILE);
     BufferedImage mainSatelliteImage = loadImageOrDie(MAIN_SATELLITE_IMAGE_FILE);
     BufferedImage secondarySatelliteImage = loadImageOrDie(SECONDARY_SATELLITE_IMAGE_FILE);
-
-    this.physicsObjects = new ArrayList<>();
 
     PhysicsObject earth =
         new PhysicsObjectBuilder()
@@ -96,11 +123,6 @@ public class TetherSim {
 
     this.simCanvas = new SimCanvas(SPACE_VIEW_WIDTH, backgroundImage, physicsObjects, physicsLock);
     simCanvas.setPreferredSize(new Dimension(VIEW_WIDTH, VIEW_HEIGHT));
-    frame.add(simCanvas);
-
-    frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-    frame.pack();
-    frame.setVisible(true);
   }
 
   private BufferedImage loadImageOrDie(String imageFile) {
@@ -233,6 +255,56 @@ public class TetherSim {
 
   private double momentOfInertiaForDisc(double mass, double radius) {
     return 0.5 * mass * radius * radius;
+  }
+
+  private JComponent createTetherControl() {
+    JRadioButton retractButton =
+        new JRadioButton(
+            new AbstractAction("Retract") {
+              public void actionPerformed(ActionEvent e) {
+                tetherState = TetherState.RETRACTING;
+              }
+            });
+    this.tetherHoldButton =
+        new JRadioButton(
+            new AbstractAction("Hold") {
+              public void actionPerformed(ActionEvent e) {
+                tetherState = TetherState.HOLDING;
+              }
+            });
+    JRadioButton extendButton =
+        new JRadioButton(
+            new AbstractAction("Extend") {
+              public void actionPerformed(ActionEvent e) {
+                tetherState = TetherState.EXTENDING;
+              }
+            });
+
+    ButtonGroup group = new ButtonGroup();
+    group.add(retractButton);
+    group.add(tetherHoldButton);
+    group.add(extendButton);
+
+    tetherHoldButton.setSelected(true);
+
+    final int titleMargin = 20;
+    final int buttonMargin = 10;
+
+    Box box = Box.createVerticalBox();
+
+    box.add(Box.createVerticalGlue());
+
+    box.add(new JLabel("Tether Control"));
+    box.add(Box.createVerticalStrut(titleMargin));
+    box.add(retractButton);
+    box.add(Box.createVerticalStrut(buttonMargin));
+    box.add(tetherHoldButton);
+    box.add(Box.createVerticalStrut(buttonMargin));
+    box.add(extendButton);
+
+    box.add(Box.createVerticalGlue());
+
+    return box;
   }
 
   public void start() {
