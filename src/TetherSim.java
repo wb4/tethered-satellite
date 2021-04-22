@@ -14,12 +14,15 @@ import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JRadioButton;
+import javax.swing.SwingUtilities;
 import javax.swing.border.EmptyBorder;
 
 public class TetherSim {
 
   private static final int VIEW_WIDTH = 2000;
   private static final int VIEW_HEIGHT = 2000;
+
+  private static final float FONT_SIZE = 40.0f;
 
   private static final double SPACE_VIEW_WIDTH = 40000.0;
 
@@ -34,10 +37,11 @@ public class TetherSim {
 
   private static final double SECONDARY_SATELLITE_RADIUS = 400.0;
   private static final double SECONDARY_SATELLITE_MASS = 70.0;
-  private static final double SECONDARY_SATELLITE_DISTANCE = 2.1 * EARTH_RADIUS;
 
   private static final double TETHER_PIECE_MASS = 10;
   private static final int TETHER_PIECE_COUNT = 20;
+  private static final double TETHER_LENGTH_MIN = 100.0;
+  private static final double TETHER_SPOOL_RATE = 500.0;
 
   private static final String BACKGROUND_IMAGE_FILE = "images/space_background.jpg";
   private static final String EARTH_IMAGE_FILE = "images/earth.png";
@@ -107,6 +111,12 @@ public class TetherSim {
 
     physicsObjects.add(earth);
 
+    double secondarySatelliteDistance =
+        MAIN_SATELLITE_DISTANCE
+            - MAIN_SATELLITE_RADIUS
+            - SECONDARY_SATELLITE_RADIUS
+            - TETHER_LENGTH_MIN;
+
     physicsObjects.addAll(
         createOrbitingTetheredSatellite(
             earth,
@@ -114,7 +124,7 @@ public class TetherSim {
             MAIN_SATELLITE_MASS,
             MAIN_SATELLITE_RADIUS,
             mainSatelliteImage,
-            SECONDARY_SATELLITE_DISTANCE,
+            secondarySatelliteDistance,
             SECONDARY_SATELLITE_MASS,
             SECONDARY_SATELLITE_RADIUS,
             secondarySatelliteImage,
@@ -259,6 +269,8 @@ public class TetherSim {
   }
 
   private JComponent createTetherControl() {
+    JLabel label = new JLabel("Tether Control");
+
     JRadioButton retractButton =
         new JRadioButton(
             new AbstractAction("Retract") {
@@ -288,6 +300,11 @@ public class TetherSim {
 
     tetherHoldButton.setSelected(true);
 
+    fixFontSize(label);
+    fixFontSize(retractButton);
+    fixFontSize(tetherHoldButton);
+    fixFontSize(extendButton);
+
     final int padding = 10;
     final int titleMargin = 20;
     final int buttonMargin = 10;
@@ -297,7 +314,7 @@ public class TetherSim {
 
     box.add(Box.createVerticalGlue());
 
-    box.add(new JLabel("Tether Control"));
+    box.add(label);
     box.add(Box.createVerticalStrut(titleMargin));
     box.add(retractButton);
     box.add(Box.createVerticalStrut(buttonMargin));
@@ -308,6 +325,10 @@ public class TetherSim {
     box.add(Box.createVerticalGlue());
 
     return box;
+  }
+
+  private void fixFontSize(JComponent component) {
+    component.setFont(component.getFont().deriveFont(FONT_SIZE));
   }
 
   public void start() {
@@ -343,7 +364,8 @@ public class TetherSim {
   private void tickPhysics(double secs) {
     applyGravity(secs);
 
-    applyTetherRebounds(secs);
+    spoolTether(secs);
+    applyTetherRebounds();
     applyCollisions(secs);
     synchronized (physicsLock) {
       applyMovement(secs);
@@ -374,7 +396,37 @@ public class TetherSim {
     }
   }
 
-  private void applyTetherRebounds(double secs) {
+  private void spoolTether(double secs) {
+    if (tetherState == TetherState.HOLDING) {
+      return;
+    }
+
+    double segmentLengthMin = TETHER_LENGTH_MIN / (TETHER_PIECE_COUNT + 1);
+    double segmentSpoolRate = TETHER_SPOOL_RATE / (TETHER_PIECE_COUNT + 1);
+    double segmentSpoolAmount = segmentSpoolRate * secs;
+    if (tetherState == TetherState.RETRACTING) {
+      segmentSpoolAmount *= -1.0;
+    }
+
+    boolean switchToHolding = false;
+
+    for (PhysicsObject po : physicsObjects) {
+      if (po.downlinkObject() != null) {
+        double newLength = po.tetherMaxLength() + segmentSpoolAmount;
+        if (newLength < segmentLengthMin && tetherState == TetherState.RETRACTING) {
+          newLength = segmentLengthMin;
+          switchToHolding = true;
+        }
+        po.setTetherMaxLength(newLength);
+      }
+    }
+
+    if (switchToHolding == true) {
+      SwingUtilities.invokeLater(() -> tetherHoldButton.doClick());
+    }
+  }
+
+  private void applyTetherRebounds() {
     for (PhysicsObject po : physicsObjects) {
       if (po.downlinkObject() != null) {
         applyTetherRebound(po);

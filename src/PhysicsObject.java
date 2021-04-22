@@ -77,6 +77,10 @@ class PhysicsObject {
     return tetherMaxLength;
   }
 
+  public void setTetherMaxLength(double tetherMaxLength) {
+    this.tetherMaxLength = tetherMaxLength;
+  }
+
   public void move(double secs) {
     position = position.add(velocity.scale(secs));
     angleRad += angularSpeed * secs;
