@@ -18,6 +18,7 @@ class PhysicsObject {
   PhysicsObject downlinkObject = null;
 
   double tetherMaxLength = 1.0;
+  double tetherExtendRate = 0.0;
 
   PhysicsObject() {}
 
@@ -79,6 +80,14 @@ class PhysicsObject {
 
   public void setTetherMaxLength(double tetherMaxLength) {
     this.tetherMaxLength = tetherMaxLength;
+  }
+
+  public double tetherExtendRate() {
+    return tetherExtendRate;
+  }
+
+  public void setTetherExtendRate(double tetherExtendRate) {
+    this.tetherExtendRate = tetherExtendRate;
   }
 
   public void move(double secs) {

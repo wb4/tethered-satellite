@@ -38,7 +38,7 @@ public class TetherSim {
   private static final double SECONDARY_SATELLITE_RADIUS = 400.0;
   private static final double SECONDARY_SATELLITE_MASS = 70.0;
 
-  private static final double TETHER_PIECE_MASS = 10;
+  private static final double TETHER_PIECE_MASS = 5;
   private static final int TETHER_PIECE_COUNT = 20;
   private static final double TETHER_LENGTH_MIN = 100.0;
   private static final double TETHER_SPOOL_RATE = 500.0;
@@ -398,6 +398,9 @@ public class TetherSim {
 
   private void spoolTether(double secs) {
     if (tetherState == TetherState.HOLDING) {
+      for (PhysicsObject po : physicsObjects) {
+        po.setTetherExtendRate(0.0);
+      }
       return;
     }
 
@@ -417,6 +420,7 @@ public class TetherSim {
           newLength = segmentLengthMin;
           switchToHolding = true;
         }
+        po.setTetherExtendRate((newLength - po.tetherMaxLength()) / secs);
         po.setTetherMaxLength(newLength);
       }
     }
@@ -548,14 +552,20 @@ public class TetherSim {
     double vHaP = vHa.dot(offsetUnit);
     double vHbP = vHb.dot(offsetUnit);
 
-    if (vHbP <= vHaP) {
-      // The two ends of the tether are not moving away from each other, so there
-      // is no rebound.
+    // We factor the tether extension rate into the recession speed calculation.
+    // For example, if the tether is retracting, then that increases the effective
+    // recession speed of the two objects; we want them to rebound harder so that
+    // they will be "reeled in" by the retracting tether.
+    // Likewise, if the tether is extending, then that decreases the effective
+    // recession speed, and we don't need them to rebound as hard.
+    double effectiveRecessionSpeed = vHbP - vHaP - a.tetherExtendRate();
+
+    if (effectiveRecessionSpeed <= 0) {
       return;
     }
 
     double impulseMagnitude =
-        (vHbP - vHaP)
+        effectiveRecessionSpeed
             / (1.0 / a.mass()
                 + 1.0 / b.mass()
                 + Math.pow(uA.dot(offsetUnit), 2.0) / a.momentOfInertia()
